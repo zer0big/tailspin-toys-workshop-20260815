@@ -1,1 +1,52 @@
 @import "tailwindcss";
+
+/*
+ * High contrast mode overrides.
+ *
+ * Toggled by the header button (see Header.astro) which adds/removes the
+ * `high-contrast` class on <html>. The preference is applied in Layout.astro
+ * before first paint so reloading the page never flashes the default theme.
+ *
+ * Tailwind utility classes are matched by substring so every component gets
+ * maximum-contrast colors without needing per-component overrides.
+ */
+.high-contrast {
+  color-scheme: dark;
+}
+
+.high-contrast body,
+.high-contrast [class*="bg-slate-"],
+.high-contrast [class*="bg-blue-"],
+.high-contrast [class*="bg-purple-"],
+.high-contrast [class*="bg-white"],
+.high-contrast [class*="bg-gradient-"] {
+  background-color: #000000 !important;
+  background-image: none !important;
+}
+
+.high-contrast [class*="text-slate-"],
+.high-contrast [class*="text-white"],
+.high-contrast [class*="text-purple-"] {
+  color: #ffffff !important;
+}
+
+.high-contrast a,
+.high-contrast [class*="text-blue-"],
+.high-contrast [class*="text-yellow-"] {
+  color: #ffff00 !important;
+}
+
+.high-contrast [class*="border-slate-"],
+.high-contrast [class*="border-blue-"] {
+  border-color: #ffffff !important;
+}
+
+.high-contrast [class*="shadow-"] {
+  box-shadow: none !important;
+}
+
+/* Preserve strong, visible focus indicators — never remove them in high contrast. */
+.high-contrast *:focus-visible {
+  outline: 3px solid #ffff00 !important;
+  outline-offset: 2px !important;
+}
