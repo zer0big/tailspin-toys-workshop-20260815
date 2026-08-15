@@ -24,6 +24,122 @@ test.describe('Game Listing and Navigation', () => {
     });
   });
 
+  test('should filter games by category', async ({ page }) => {
+    await test.step('Navigate to homepage', async () => {
+      await page.goto('/');
+      await expect(page.getByTestId('game-filters-form')).toBeVisible();
+    });
+
+    let selectedCategoryId = '';
+    await test.step('Select a category filter option', async () => {
+      const firstCategoryFilter = page.locator('input[name="category"]').first();
+      selectedCategoryId = await firstCategoryFilter.inputValue();
+      await firstCategoryFilter.check();
+    });
+
+    await test.step('Verify every visible game card matches the selected category', async () => {
+      const categoryMatches = await page
+        .locator('[data-testid="game-card"]:visible')
+        .evaluateAll((cards, categoryId) =>
+          cards.every((card) => card.getAttribute('data-game-category-id') === categoryId),
+          selectedCategoryId,
+        );
+      expect(categoryMatches).toBeTruthy();
+    });
+  });
+
+  test('should filter games by publisher', async ({ page }) => {
+    await test.step('Navigate to homepage', async () => {
+      await page.goto('/');
+      await expect(page.getByTestId('game-filters-form')).toBeVisible();
+    });
+
+    let selectedPublisherId = '';
+    await test.step('Select a publisher from the filter', async () => {
+      selectedPublisherId = await page.locator('[data-testid="game-card"]').evaluateAll((cards) => {
+        const match = cards.find((card) => card.getAttribute('data-game-publisher-id'));
+        return match?.getAttribute('data-game-publisher-id') ?? '';
+      });
+      await page.getByTestId('publisher-filter-select').selectOption(selectedPublisherId);
+    });
+
+    await test.step('Verify every visible game card matches the selected publisher', async () => {
+      const publisherMatches = await page
+        .locator('[data-testid="game-card"]:visible')
+        .evaluateAll((cards, publisherId) =>
+          cards.every((card) => card.getAttribute('data-game-publisher-id') === publisherId),
+          selectedPublisherId,
+        );
+      expect(publisherMatches).toBeTruthy();
+    });
+  });
+
+  test('should combine category and publisher filters', async ({ page }) => {
+    await test.step('Navigate to homepage', async () => {
+      await page.goto('/');
+      await expect(page.getByTestId('game-filters-form')).toBeVisible();
+    });
+
+    let selectedCategoryId = '';
+    let selectedPublisherId = '';
+    await test.step('Use a game card to select a known-valid combined filter', async () => {
+      const selected = await page.locator('[data-testid="game-card"]').evaluateAll((cards) => {
+        const match = cards.find(
+          (card) =>
+            card.getAttribute('data-game-category-id') &&
+            card.getAttribute('data-game-publisher-id'),
+        );
+        return {
+          categoryId: match?.getAttribute('data-game-category-id') ?? '',
+          publisherId: match?.getAttribute('data-game-publisher-id') ?? '',
+        };
+      });
+      selectedCategoryId = selected.categoryId;
+      selectedPublisherId = selected.publisherId;
+
+      const categoryFilter = page.locator(`input[name="category"][value="${selectedCategoryId}"]`);
+      await categoryFilter.check();
+      await page.getByTestId('publisher-filter-select').selectOption(selectedPublisherId);
+    });
+
+    await test.step('Verify every visible game card matches both filters', async () => {
+      const combinedMatches = await page
+        .locator('[data-testid="game-card"]:visible')
+        .evaluateAll(
+          (cards, args) =>
+            cards.every(
+              (card) =>
+                card.getAttribute('data-game-category-id') === args.categoryId &&
+                card.getAttribute('data-game-publisher-id') === args.publisherId,
+            ),
+          { categoryId: selectedCategoryId, publisherId: selectedPublisherId },
+        );
+      expect(combinedMatches).toBeTruthy();
+    });
+  });
+
+  test('should clear applied filters', async ({ page }) => {
+    await test.step('Navigate to homepage', async () => {
+      await page.goto('/');
+      await expect(page.getByTestId('game-filters-form')).toBeVisible();
+    });
+
+    await test.step('Apply category and publisher filters', async () => {
+      await page.locator('input[name="category"]').first().check();
+      const publisherId = await page.locator('[data-testid="game-card"]').evaluateAll((cards) => {
+        const match = cards.find((card) => card.getAttribute('data-game-publisher-id'));
+        return match?.getAttribute('data-game-publisher-id') ?? '';
+      });
+      await page.getByTestId('publisher-filter-select').selectOption(publisherId);
+    });
+
+    await test.step('Clear filters and verify controls reset', async () => {
+      await page.getByTestId('clear-filters-button').click();
+      await expect(page.locator('input[name="category"]').first()).not.toBeChecked();
+      await expect(page.getByTestId('publisher-filter-select')).toHaveValue('');
+    });
+  });
+
   test('should navigate to correct game details page when clicking on a game', async ({ page }) => {
     let gameId: string | null;
     let gameTitle: string | null;
